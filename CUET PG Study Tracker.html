@@ -1,0 +1,942 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>CUET PG Study Tracker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=JetBrains+Mono:wght@400;600&family=Source+Sans+3:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one column "lab notebook": header with progress, sticky tab bar, then a single working view. Signature element: the 18-week strip, one cell per week, filled like a stained slide. */
+:root{
+  --bg:#f5f4fa; --surface:#ffffff; --surface2:#eceaf5; --ink:#1c1a2e; --muted:#5f5b77;
+  --line:#dedaec; --line2:#b9b3d0;
+  --accent:#4636a6; --accent-ink:#ffffff; --eo:#c2255c;
+  --ok:#1d7f49; --warn:#a15c00; --bad:#b42318;
+  --t1:#4636a6; --t2:#0b6f66; --tF:#b42318; --tL:#3b7a1c; --tM:#9a5400; --all:#3a3650; --rev:#4f6180;
+  --f-display:'Bricolage Grotesque','Segoe UI',system-ui,sans-serif;
+  --f-body:'Source Sans 3','Segoe UI',system-ui,-apple-system,sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#13111d; --surface:#1c1a2b; --surface2:#262338; --ink:#ecebf7; --muted:#a6a2bd;
+    --line:#35314c; --line2:#4d486b;
+    --accent:#a99dff; --accent-ink:#17122e; --eo:#ff7fa8;
+    --ok:#63d391; --warn:#f0b45a; --bad:#ff8a7a;
+    --t1:#a99dff; --t2:#4fd1c0; --tF:#ff8a7a; --tL:#9ad06a; --tM:#f0b45a; --all:#d2cee8; --rev:#a3b4d1;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#13111d; --surface:#1c1a2b; --surface2:#262338; --ink:#ecebf7; --muted:#a6a2bd;
+  --line:#35314c; --line2:#4d486b;
+  --accent:#a99dff; --accent-ink:#17122e; --eo:#ff7fa8;
+  --ok:#63d391; --warn:#f0b45a; --bad:#ff8a7a;
+  --t1:#a99dff; --t2:#4fd1c0; --tF:#ff8a7a; --tL:#9ad06a; --tM:#f0b45a; --all:#d2cee8; --rev:#a3b4d1;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:400 15px/1.5 var(--f-body);-webkit-text-size-adjust:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);background:var(--bg);z-index:10}
+.page{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 56px}
+.wrap{max-width:980px;margin:0 auto}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 50%,transparent);outline-offset:2px}
+.mono{font-family:var(--f-mono)}
+.eyebrow{font:600 11px/1.2 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;gap:16px 32px;align-items:flex-end;justify-content:space-between;padding-bottom:18px}
+.brand{min-width:0;flex:1 1 320px}
+.brand h1{font-size:clamp(26px,5vw,38px);font-weight:700;line-height:1.05;margin-top:8px}
+.brand p{margin:6px 0 0;color:var(--muted)}
+.sync{display:inline-flex;align-items:center;gap:7px;font:500 12px var(--f-mono);color:var(--muted);margin-top:10px}
+.sync i{width:8px;height:8px;border-radius:50%;background:var(--line2)}
+.sync[data-s="ok"] i{background:var(--ok)}
+.sync[data-s="saving"] i{background:var(--warn)}
+.sync[data-s="fail"] i{background:var(--bad)}
+.kpis{display:flex;flex-wrap:wrap;gap:12px 28px;align-items:flex-end;flex:1 1 360px;justify-content:flex-end}
+.kpi{min-width:0}
+.kpi b{display:block;font:700 28px/1 var(--f-display);font-variant-numeric:tabular-nums}
+.kpi span{font-size:12px;color:var(--muted)}
+.kpi.big{flex:1 1 220px}
+.kpi.big b{font-size:44px}
+.bar{height:8px;border-radius:99px;background:var(--surface2);overflow:hidden;margin-top:8px}
+.bar>i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .3s}
+.bar.thin{height:6px;margin-top:0}
+
+/* tabs */
+.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--bg);border-bottom:1px solid var(--line);display:flex;gap:2px;overflow-x:auto;scrollbar-width:none;margin-bottom:20px}
+.tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:12px 14px 9px;font-weight:600;color:var(--muted);white-space:nowrap}
+.tabs button[aria-current="page"]{color:var(--ink);border-bottom-color:var(--accent)}
+.tabs button:hover{color:var(--ink)}
+
+/* generic */
+.grid2{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:760px){.grid2{grid-template-columns:minmax(0,1fr)}}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px}
+.card+.card{margin-top:16px}
+.stack{display:flex;flex-direction:column;gap:16px}
+.card h2{font-size:20px;font-weight:650}
+.card h3{font-size:15px;font-weight:650}
+.sec-h{display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-bottom:12px}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+.btn{background:var(--surface);border:1px solid var(--line2);border-radius:8px;padding:7px 12px;font-weight:600;font-size:13px}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.pri:hover{color:var(--accent-ink);filter:brightness(1.08)}
+.btn.danger:hover{border-color:var(--bad);color:var(--bad)}
+.btn.sm{padding:4px 9px;font-size:12px}
+.chip{--c:var(--muted);display:inline-block;font:600 11px/1 var(--f-mono);padding:4px 7px;border-radius:5px;color:var(--c);background:color-mix(in srgb,var(--c) 12%,var(--surface));border:1px solid color-mix(in srgb,var(--c) 30%,transparent);white-space:normal}
+.c-t1{--c:var(--t1)}.c-t2{--c:var(--t2)}.c-tF{--c:var(--tF)}.c-tL{--c:var(--tL)}.c-tM{--c:var(--tM)}.c-all{--c:var(--all)}.c-rev{--c:var(--rev)}.c-sun{--c:var(--rev)}
+.chip.c-mock{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.chip.warn{--c:var(--warn)}.chip.eo{--c:var(--eo)}
+input[type=text],input[type=number],input[type=date],select,textarea{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line2);border-radius:7px;padding:6px 9px;min-width:0;max-width:100%}
+textarea{width:100%;resize:vertical;min-height:62px}
+input::placeholder,textarea::placeholder{color:var(--muted);opacity:.8}
+
+/* check */
+.chk{display:grid;place-items:center;padding:8px;margin:-8px;cursor:pointer}
+.chk input{appearance:none;-webkit-appearance:none;width:22px;height:22px;margin:0;border:2px solid var(--line2);border-radius:6px;background:var(--surface);display:grid;place-content:center;cursor:pointer}
+.chk input::after{content:"";width:6px;height:11px;border:solid var(--accent-ink);border-width:0 2.5px 2.5px 0;transform:rotate(45deg) scale(0);margin-top:-2px;transition:transform .12s}
+.chk input:checked{background:var(--accent);border-color:var(--accent)}
+.chk input:checked::after{transform:rotate(45deg) scale(1)}
+.chk input:disabled{opacity:.35;cursor:not-allowed}
+
+/* week strip */
+.strip{display:grid;grid-template-columns:repeat(18,minmax(0,1fr));gap:4px}
+.cell{position:relative;height:46px;border:1px solid var(--line2);border-radius:5px;background:var(--surface);padding:0;overflow:hidden;text-align:left}
+.cell i{position:absolute;left:0;right:0;bottom:0;background:var(--accent);opacity:.85}
+.cell.buf{border-style:dashed}
+.cell.now{outline:2px solid var(--eo);outline-offset:1px}
+.cell span{position:absolute;top:3px;left:0;right:0;text-align:center;font:600 10px var(--f-mono);color:var(--ink);mix-blend-mode:normal}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;font-size:12px;color:var(--muted)}
+@media (max-width:560px){.strip{grid-template-columns:repeat(9,minmax(0,1fr))}}
+
+/* readiness */
+.ready{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:6px 12px;align-items:center}
+.ready .code{font:600 12px var(--f-mono);color:var(--muted)}
+.ready .nm{font-weight:600}
+.ready .v{font:600 13px var(--f-mono);font-variant-numeric:tabular-nums}
+
+/* today card */
+.today-card h2{font-size:clamp(22px,4vw,30px);font-weight:700;line-height:1.15;margin:8px 0 10px}
+.blocks{display:flex;flex-direction:column;gap:2px;margin:14px 0}
+.blk{display:grid;grid-template-columns:auto 118px minmax(0,1fr);gap:12px;align-items:center;padding:10px 4px;border-top:1px solid var(--line);cursor:pointer}
+.blk:last-child{border-bottom:1px solid var(--line)}
+.blk .bt{font:500 12px var(--f-mono);color:var(--muted)}
+.blk .bn b{font-weight:650}
+.blk .bn em{display:block;font-style:normal;font-size:13px;color:var(--muted)}
+.blk.on .bn b{text-decoration:line-through;text-decoration-color:var(--line2)}
+@media (max-width:460px){.blk{grid-template-columns:auto minmax(0,1fr)}.blk .bt{grid-column:2;grid-row:1}.blk .bn{grid-column:2}}
+.acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.plan-in{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}
+.plan-in .topic{flex:1 1 240px}
+
+/* lists */
+.mini{list-style:none;margin:0;padding:0}
+.mini li{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.mini li:first-child{border-top:0}
+.mini .d{font:500 12px var(--f-mono);color:var(--muted)}
+.mini .tx{min-width:0;overflow-wrap:anywhere}
+.mini .mb{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+@media (max-width:460px){.mini li{grid-template-columns:54px minmax(0,1fr)}.mini .mb{grid-column:2;justify-content:flex-start}}
+
+/* plan */
+.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{background:var(--surface);border:1px solid var(--line2);border-radius:99px;padding:5px 12px;font-size:13px;font-weight:600;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.week{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.week+.week{margin-top:12px}
+.wk-h{width:100%;display:grid;grid-template-columns:minmax(0,1fr) 150px auto;gap:12px;align-items:center;text-align:left;background:none;border:0;padding:14px 16px}
+.wk-h:hover{background:var(--surface2)}
+.wk-h .t{min-width:0}
+.wk-h .t b{font:650 16px var(--f-display);display:block}
+.wk-h .t span{font-size:13px;color:var(--muted)}
+.wk-h .p{font:600 12px var(--f-mono);color:var(--muted);text-align:right;font-variant-numeric:tabular-nums}
+.chev{width:10px;height:10px;border:solid var(--muted);border-width:0 2px 2px 0;transform:rotate(45deg);transition:transform .15s;margin-right:4px}
+.week.open .chev{transform:rotate(-135deg)}
+@media (max-width:560px){.wk-h{grid-template-columns:minmax(0,1fr) auto}.wk-h .bw{display:none}}
+.wk-b{border-top:1px solid var(--line)}
+.row{display:grid;grid-template-columns:22px 54px minmax(0,1fr) auto;gap:14px;align-items:start;padding:11px 16px;border-top:1px solid var(--line);border-left:4px solid transparent}
+.row:first-child{border-top:0}
+.row.today{background:color-mix(in srgb,var(--eo) 7%,var(--surface));border-left-color:var(--eo)}
+.row.missed{border-left-color:var(--warn)}
+.row.sun .topic-t{color:var(--muted)}
+.row.done .topic-t{color:var(--muted);text-decoration:line-through;text-decoration-color:var(--line2)}
+.row.moved .topic-t{color:var(--muted);text-decoration:line-through}
+.when{display:flex;flex-direction:column;font:500 11px/1.25 var(--f-mono);color:var(--muted)}
+.when b{font-weight:600;color:var(--ink);font-size:12px}
+.topic-t{font-weight:500;overflow-wrap:anywhere}
+.row .topic{width:100%}
+.meta{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin-top:5px;font-size:12px;color:var(--muted)}
+.meta select{padding:3px 6px;font-size:12px}
+.dots{display:inline-flex;gap:3px}
+.dots i{width:7px;height:7px;border-radius:50%;background:var(--line2)}
+.dots i.on{background:var(--accent)}
+.more{background:none;border:1px solid var(--line);border-radius:7px;width:30px;height:30px;display:grid;place-items:center;color:var(--muted)}
+.more:hover{border-color:var(--accent);color:var(--accent)}
+.more .chev{margin:-3px 0 0 0;width:8px;height:8px}
+.more[aria-expanded="true"] .chev{transform:rotate(-135deg);margin-top:3px}
+.detail{padding:4px 16px 16px 106px;background:var(--surface2)}
+@media (max-width:560px){.detail{padding-left:16px}.row{gap:10px;padding-inline:12px}}
+.detail .blocks{margin-top:6px}
+.starbtn[aria-pressed="true"]{border-color:var(--eo);color:var(--eo)}
+
+/* pool */
+.pool{list-style:none;margin:0;padding:0}
+.pool li{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.pool li:first-child{border-top:0}
+.addrow{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.addrow input{flex:1 1 220px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.chips button{background:var(--surface2);border:1px solid var(--line);border-radius:99px;padding:4px 10px;font-size:12px;color:var(--ink)}
+.chips button:hover{border-color:var(--accent);color:var(--accent)}
+
+/* mocks */
+.mrow{display:grid;grid-template-columns:70px minmax(0,1fr) 84px 84px 84px 70px;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.mrow:first-child{border-top:0}
+.mrow .lb{min-width:0;overflow-wrap:anywhere}
+.mrow .lb small{display:block;color:var(--muted)}
+.mrow input{width:100%}
+.mrow .nt{grid-column:2 / -1}
+.mhead{display:grid;grid-template-columns:70px minmax(0,1fr) 84px 84px 84px 70px;gap:10px;font:600 11px var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding-bottom:6px}
+@media (max-width:700px){
+  .mhead{display:none}
+  .mrow{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .mrow .d,.mrow .lb,.mrow .nt{grid-column:1 / -1}
+  .mrow .pc{grid-column:1 / -1}
+}
+.pct{font:700 14px var(--f-mono);font-variant-numeric:tabular-nums}
+.sum{display:flex;flex-wrap:wrap;gap:12px 32px;margin-bottom:14px}
+.sum b{display:block;font:700 26px/1.1 var(--f-display);font-variant-numeric:tabular-nums}
+.sum span{font-size:12px;color:var(--muted)}
+.chart{width:100%;height:auto;display:block}
+.chart text{font:500 11px var(--f-mono);fill:var(--muted)}
+.chart .g{stroke:var(--line);stroke-width:1}
+.chart .ln{fill:none;stroke:var(--accent);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.chart .pt{fill:var(--surface);stroke:var(--accent);stroke-width:2.5}
+.chart .pv{fill:var(--ink);font-weight:600}
+
+/* syllabus */
+.tiers{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.tiers .card+.card{margin-top:0}
+.tiers ul{margin:10px 0 0;padding-left:18px}
+.tiers li{margin:4px 0}
+.ex{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.unit{display:grid;grid-template-columns:minmax(0,1fr) 120px 48px;gap:12px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.unit:first-child{border-top:0}
+.unit .v{font:600 12px var(--f-mono);text-align:right}
+@media (max-width:460px){.unit{grid-template-columns:minmax(0,1fr) 70px 44px}}
+
+.foot{margin-top:36px;padding-top:18px;border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;justify-content:space-between}
+.foot .row2{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.hidden-file{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+.toast{position:fixed;left:50%;transform:translate(-50%,20px);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:9px;font-weight:600;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:20;max-width:calc(100vw - 32px)}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.empty{color:var(--muted);padding:6px 0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="page">
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="eyebrow">SCQP13 · SCQP17 · SCQP20</div>
+      <h1>CUET PG Study Tracker</h1>
+      <p>Forensic Science, Life Sciences and MLT · 18 weeks · 26 Oct 2026 to 28 Feb 2027</p>
+      <div class="sync" id="sync" data-s="local" role="status"><i></i><span>Loading</span></div>
+    </div>
+    <div class="kpis">
+      <div class="kpi big"><b id="k-pct">0%</b><span id="k-sub">of planned study days done</span><div class="bar"><i id="k-bar" style="width:0%"></i></div></div>
+      <div class="kpi"><b id="k-streak">0</b><span>day streak</span></div>
+      <div class="kpi"><b id="k-left">0</b><span id="k-leftlbl">days left</span></div>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs" aria-label="Sections">
+    <button data-act="tab" data-v="today">Today</button>
+    <button data-act="tab" data-v="plan">Full plan</button>
+    <button data-act="tab" data-v="buffer">Buffer weeks</button>
+    <button data-act="tab" data-v="mocks">Mock tests</button>
+    <button data-act="tab" data-v="syllabus">Syllabus</button>
+  </nav>
+
+  <main id="view"></main>
+
+  <footer class="foot">
+    <div class="small muted" id="foot-note">Your progress saves automatically.</div>
+    <div class="row2" id="foot-acts">
+      <button class="btn sm" data-act="export">Export backup</button>
+      <button class="btn sm" data-act="import">Import backup</button>
+      <input class="hidden-file" type="file" id="imp" accept="application/json,.json" tabindex="-1" aria-label="Import backup file">
+      <button class="btn sm danger" data-act="resetAsk">Reset progress</button>
+    </div>
+  </footer>
+</div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<datalist id="presets">
+  <option value="Full mock test and analysis"></option>
+  <option value="PYQ drill: Tier 1 topics"></option>
+  <option value="PYQ drill: Forensic Science"></option>
+  <option value="PYQ drill: Life Sciences"></option>
+  <option value="PYQ drill: MLT"></option>
+  <option value="Weak-area revision"></option>
+  <option value="Formula and fact sheet pass"></option>
+  <option value="Light day: read own summary notes"></option>
+</datalist>
+
+<script>
+(function(){
+'use strict';
+
+/* ---------- plan data (from the master study plan) ---------- */
+var RAW = `#1|Core 1|Human Anatomy & Physiology|core
+Human Digestive & Respiratory Systems|Tier 1 (All)
+Human Circulatory System & Blood Anatomy|Tier 1 (All)
+Human Nervous System & Nerve Impulse|Tier 1 (All)
+Reproductive System & Endocrinology|Tier 1 (All)
+Human Diseases, Apoptosis & Cancer|Tier 1 (All)
+Inherited Diseases & System Integration|Tier 1 (All)
+@SUN|Review & Catch-up
+#2|Core 2|Biochemistry & Clinical Biochemistry|core
+Structure and Functions of Proteins & Amino Acids|Tier 1 (All)
+Structure of Carbohydrates, Lipids & Vitamins|Tier 1 (All)
+Bioenergetics, Glycolysis & TCA Cycle|Tier 1 (All)
+Electron Transport System & ATP Synthesis|Tier 1 (All)
+Oxidation and Synthesis of Fatty Acids|Tier 1 (All)
+Membrane Structure, Function & Clinical Correlates|Tier 1 (All)
+@SUN|Review & Catch-up
+#3|Core 3|Molecular Biology & Genetics|core
+Chromatin Structure, Centromere, Telomere|Tier 1 (All)
+Principles of Inheritance, Linkage & Crossing Over|Tier 1 (All)
+Chromosomal Aberrations & Extrachromosomal Inheritance|Tier 1 (All)
+DNA Replication & DNA Repair Mechanisms|Tier 1 (All)
+Transcription & Translation Processes|Tier 1 (All)
+Population Genetics & Polymorphism in DNA|Tier 1 (All)
+@SUN|Review & Catch-up
+#4|Core 4|Microbiology & Immunology|core
+Diversity of Microbes & Bacterial Reproduction|Tier 1 (All)
+Antimicrobial Agents & Environmental Microbiology|Tier 1 (All)
+Plant and Animal Viruses|Tier 1 (All)
+Antigen, Antibody, and Complement Systems|Tier 1 (All)
+Immunity & Immunological Techniques|Tier 1 (All)
+Vaccines & Serology Basics|Tier 1 (All)
+@SUN|Review & Catch-up
+#5|Buffer Week 1|Backlog, mocks and PYQs|buffer
+|
+|
+|
+|
+|
+|
+@SUN|Backlog & Revision
+#6|Core 5|Instrumentation & Techniques|core
+Principles/Apps of Microscopy (Simple, Compound, Electron)|Tier 1 (All)
+Chromatography (Column, Paper, TLC, GLC, LC-MS)|Tier 1 (All)
+Spectroscopy (UV, IR, Raman, Atomic Absorption)|Tier 1 (All)
+Electrophoresis (Principle, Types, Immuno-electrophoresis)|Tier 1 (All)
+Centrifugation, Blotting & Radioisotope Techniques|Tier 1 (Life Sci/MLT)
+PCR Methods, RFLP (Merits/Demerits)|Tier 1 (All)
+@SUN|Review & Catch-up
+#7|Core 6|Biotech, Serology & Hematology|core
+Recombinant DNA Tech & Principles of Gene Cloning|Tier 1 (All)
+Animal & Plant Cell Culture Applications|Tier 1 (All)
+Environmental Biotech & Biomedical Tech|Tier 1 (Life Sci/MLT)
+Clinical Pathology & Hematology Basics|Tier 2 (MLT/Forensic)
+Blood & Bloodstains, Seminal Stains, Saliva|Tier 2 (Forensic/MLT)
+Urine, Pus, Feces Examination|Tier 2 (Forensic/MLT)
+@SUN|Review & Catch-up
+#8|Core 7|Forensic: Intro, Police & Crime Scene|core
+History, Scope & Ethics in Forensic Science|Tier 3 (Forensic)
+Fundamental of Police System (BSF, CBI, RAW, etc.)|Tier 3 (Forensic)
+Police Science & Interview/Interrogation Guidelines|Tier 3 (Forensic)
+Crime Scene Protection, Documentation (Photography, Sketch)|Tier 3 (Forensic)
+Crime Scene Mgt (Info, Tech, Manpower, Logistic)|Tier 3 (Forensic)
+Crime Scene Reconstruction & Pattern Evidence|Tier 3 (Forensic)
+@SUN|Review & Catch-up
+#9|Core 8|Forensic: Evidence, Documents, IPC|core
+Physical Evidences (Class/Individual, Chain of Custody)|Tier 3 (Forensic)
+Fingerprints (Types, Classification, Latent Prints)|Tier 3 (Forensic)
+Questioned Documents, Alterations & Writing Instruments|Tier 3 (Forensic)
+Hand Writing Comparison, Typed/Computer Docs|Tier 3 (Forensic)
+Foot, Shoe, Tyre & Track Marks Examination|Tier 3 (Forensic)
+IPC (1860), Cr.P.C (1973), IEA (1872) Basics|Tier 3 (Forensic)
+@SUN|Review & Catch-up
+#10|Buffer Week 2|Backlog, mocks and PYQs|buffer
+|
+|
+|
+|
+|
+|
+@SUN|Backlog & Revision
+#11|Core 9|Forensic Med, Tox & Botany|core
+Forensic Medicine: Autopsy, Modes of Death, Post-Mortem|Tier 3 (Forensic)
+Wounds, Thermal/Electric/Firearm Injuries|Tier 3 (Forensic)
+Toxicology: Types of Poisons, Extraction Procedures|Tier 3 (Forensic)
+Drug Analysis (Opiates, Cannabis, LSD, Barbiturates)|Tier 3 (Forensic)
+Hair & Fiber Anatomy, Examination|Tier 3 (Forensic)
+Forensic Botany (Woods, Diatoms, Pollen Grains)|Tier 2 (Forensic/Life Sci)
+@SUN|Review & Catch-up
+#12|Core 10|Forensic Chem & Physics|core
+General Chem: Distillation, Sublimation, Extraction|Tier 3 (Forensic)
+Photochemistry (Laws, Jablonski Diagram, Fluorescence)|Tier 3 (Forensic)
+Organic Chem (Bonding, Alkanes to Carboxylic Acids)|Tier 3 (Forensic)
+Inorganic Chem (Periodic Trends, Acids/Bases, Magnetism)|Tier 3 (Forensic)
+Basic Physics (Temp, Weight, Density, Laws of Motion)|Tier 3 (Forensic)
+Basic Optics (Interference, Superposition, Michelson)|Tier 3 (Forensic)
+@SUN|Review & Catch-up
+#13|Core 11|Life Sciences Specifics|core
+Bryophytes, Pteridophytes, Gymnosperms|Tier 3 (Life Sci)
+Angiosperms, Vascular System in Plants|Tier 3 (Life Sci)
+Economic Importance of Plants|Tier 3 (Life Sci)
+Photosynthesis & Biogeochemical Cycles|Tier 3 (Life Sci)
+Photoperiodism & Vernalization|Tier 3 (Life Sci)
+Animal Sciences: Invertebrates vs Vertebrates traits|Tier 3 (Life Sci)
+@SUN|Review & Catch-up
+#14|Core 12|MLT Specifics & Leftovers|core
+Biostatistics Basics|Tier 3 (MLT)
+Histopathology Techniques & Processing|Tier 3 (MLT)
+Advanced Clinical Pathology specific topics|Tier 3 (MLT)
+Review of Applied Genetics in MLT|Tier 3 (MLT)
+Forensic Trace Evidence review (Glass/Paint/Soil)|Tier 3 (Forensic)
+General leftover sweep (All Syllabi check)|Tier 3 (All)
+@SUN|Review & Catch-up
+#15|Buffer Week 3|Backlog, mocks and PYQs|buffer
+|
+|
+|
+|
+|
+|
+@SUN|Backlog & Revision
+#16|Final Lap 1|Full Mocks & Tier 1 Review|final
+Rapid Review: Tier 1 (Anatomy, Physiology, Biochem)|Rapid Revision
+Full Syllabus Mock Test 1 (Focus: Life Sciences)|Mock & Analysis
+Rapid Review: Tier 1 (Molecular Bio, Microbio, Genetics)|Rapid Revision
+Full Syllabus Mock Test 2 (Focus: Forensic Science)|Mock & Analysis
+Rapid Review: Tier 1 (Techniques & Biotech)|Rapid Revision
+Full Syllabus Mock Test 3 (Focus: MLT)|Mock & Analysis
+@SUN|Review Weaknesses
+#17|Final Lap 2|Full Mocks & Tier 2/3 Review|final
+Rapid Review: Forensic Investigation, Crime Scene, IPC|Rapid Revision
+Full Syllabus Mock Test 4 (Mixed CUET format)|Mock & Analysis
+Rapid Review: Forensic Chem, Tox, Med & Botany|Rapid Revision
+Full Syllabus Mock Test 5 (Mixed CUET format)|Mock & Analysis
+Rapid Review: Plant/Animal Sciences & Biostats|Rapid Revision
+Full Syllabus Mock Test 6 (Mixed CUET format)|Mock & Analysis
+@SUN|Review Weaknesses
+#18|Final Lap 3|Final Mocks & Exam Strategy|final
+Formula & Fact Memorization (Values, Laws, Sections)|Memory Drill
+Full Syllabus Mock Test 7|Mock & Analysis
+Final Sweep of High-Yield PYQs (Last 5 years)|PYQ Drill
+Full Syllabus Mock Test 8|Mock & Analysis
+Doubt clearance and scanning own summary notes|Light Revision
+Strategy Planning (Time Mgt, Skip/Attempt Rules)|Mentality Check
+Rest & Mental Prep (Zero New Topics)|Exam Readiness`;
+var SUNTXT='Buffer Sunday: Backlog & Revision (Zero New Topics)';
+var BUFFOCUS=['Backlog','Mock test','PYQ drill','Revision','Weak areas','Light day'];
+var EXAMS={F:{code:'SCQP13',name:'Forensic Science'},L:{code:'SCQP17',name:'Life Sciences'},M:{code:'SCQP20',name:'MLT'}};
+var BLOCKS=[
+  {t:'6:00 – 8:00 PM',n:'Theory block 1',h:'Deep conceptual study'},
+  {t:'8:00 – 9:00 PM',n:'Practice',h:'MCQs and topic-wise PYQs'},
+  {t:'9:00 – 10:00 PM',n:'Theory block 2',h:'Secondary topic or continuation'},
+  {t:'10:00 – 11:00 PM',n:'Revision',h:"Active recall of the day's topics"}
+];
+
+/* ---------- date helpers ---------- */
+var DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var START=new Date(2026,9,26);
+function pad(n){return n<10?'0'+n:''+n}
+function keyOf(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function parseKey(k){return new Date(+k.slice(0,4),+k.slice(5,7)-1,+k.slice(8,10))}
+function addDays(d,n){return new Date(d.getFullYear(),d.getMonth(),d.getDate()+n)}
+function fmt(d){return d.getDate()+' '+MON[d.getMonth()]}
+function fmtL(d){return DOW[d.getDay()]+' '+fmt(d)}
+function dayDiff(a,b){return Math.round((a-b)/864e5)}
+function todayDate(){var n=new Date();return new Date(n.getFullYear(),n.getMonth(),n.getDate())}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+
+/* ---------- build the plan ---------- */
+var WEEKS=[];
+RAW.split('\n').forEach(function(l){
+  if(l.charAt(0)==='#'){var p=l.slice(1).split('|');WEEKS.push({n:+p[0],label:p[1],title:p[2],kind:p[3],days:[]});}
+  else{var q=l.split('|');var t=q[0].trim();if(t==='@SUN')t=SUNTXT;WEEKS[WEEKS.length-1].days.push({topic:t,focus:(q[1]||'').trim()});}
+});
+function catOf(x,buf,sun){
+  if(buf)return 'buf'; if(sun)return 'sun';
+  var f=x.focus;
+  if(/^Tier 1/.test(f))return 't1';
+  if(/^Tier 2/.test(f))return 't2';
+  if(/^Tier 3 \(Forensic/.test(f))return 'tF';
+  if(/^Tier 3 \(Life Sci/.test(f))return 'tL';
+  if(/^Tier 3 \(MLT/.test(f))return 'tM';
+  if(/^Tier 3/.test(f))return 'all';
+  if(/Mock/.test(f))return 'mock';
+  return 'rev';
+}
+function examsOf(f){
+  if(!/^Tier/.test(f))return [];
+  var m=f.match(/\((.*)\)/),s=m?m[1]:'';
+  if(/All/.test(s))return ['F','L','M'];
+  var r=[]; if(/Forensic/.test(s))r.push('F'); if(/Life Sci/.test(s))r.push('L'); if(/MLT/.test(s))r.push('M'); return r;
+}
+var DAYS=[],BYKEY={};
+WEEKS.forEach(function(w){w.days.forEach(function(x,i){
+  var date=addDays(START,(w.n-1)*7+i),sun=i===6,buf=w.kind==='buffer'&&!sun;
+  var d={key:keyOf(date),date:date,idx:DAYS.length,w:w,i:i,sun:sun,buf:buf,topic:x.topic,focus:x.focus,cat:catOf(x,buf,sun),exams:(w.kind==='core'&&!sun)?examsOf(x.focus):[]};
+  DAYS.push(d);BYKEY[d.key]=d;
+});});
+var LAST=DAYS.length-1;
+
+/* ---------- state & persistence ---------- */
+var LS='cuetpg-tracker-v1';
+function blank(){return {v:1,updatedAt:0,days:{},mocks:{},extraMocks:[],pool:[],mockTotal:300}}
+function normalize(r){var b=blank();if(!r||typeof r!=='object')return b;
+  b.updatedAt=+r.updatedAt||0;b.days=(r.days&&typeof r.days==='object')?r.days:{};b.mocks=(r.mocks&&typeof r.mocks==='object')?r.mocks:{};
+  b.extraMocks=Array.isArray(r.extraMocks)?r.extraMocks:[];b.pool=Array.isArray(r.pool)?r.pool:[];b.mockTotal=+r.mockTotal>0?+r.mockTotal:300;return b;}
+function loadLocal(){try{var r=localStorage.getItem(LS);return r?JSON.parse(r):null}catch(e){return null}}
+var S=normalize(loadLocal());
+function saveLocal(){try{localStorage.setItem(LS,JSON.stringify(S))}catch(e){}}
+
+var docRef=null,remoteReady=false,writing=false,dirty=false,saveTimer=null,softTimer=null,syncMode='local';
+var SYNCTXT={local:'Saved on this device only',ok:'Synced to your account',saving:'Saving…',fail:'Sync failed, saved on this device'};
+function setSync(m){syncMode=m;var el=document.getElementById('sync');if(!el)return;el.setAttribute('data-s',m);el.lastChild.textContent=SYNCTXT[m]||''}
+function touch(){S.updatedAt=Date.now();saveLocal();scheduleRemote()}
+function touchSoon(){clearTimeout(softTimer);softTimer=setTimeout(touch,350)}
+function scheduleRemote(){if(!docRef){setSync('local');return}setSync('saving');clearTimeout(saveTimer);saveTimer=setTimeout(flush,700)}
+async function flush(){
+  if(!docRef||!remoteReady)return;
+  if(writing){dirty=true;return}
+  writing=true;
+  try{do{dirty=false;await docRef.set({json:JSON.stringify(S),updatedAt:S.updatedAt});}while(dirty);setSync('ok');}
+  catch(e){setSync('fail')}
+  writing=false;
+}
+async function connect(){
+  try{
+    if(!window.claude||!window.claude.use){setSync('local');return}
+    var u=await window.claude.use('user'),db=await window.claude.use('db');
+    if(!u||!db){setSync('local');return}
+    var uid=await u.id(); if(!uid){setSync('local');return}
+    docRef=db.doc('data/users/'+uid+'/tracker');
+    setSync('saving');
+    docRef.onSnapshot(function(snap){
+      if(snap.metadata&&snap.metadata.hasPendingWrites)return;
+      if(!snap.exists){
+        if(snap.metadata&&snap.metadata.fromCache)return;
+        remoteReady=true; if(S.updatedAt)flush(); else setSync('ok'); return;
+      }
+      if(!(snap.metadata&&snap.metadata.fromCache))remoteReady=true;
+      var data=snap.data()||{},r;
+      try{r=JSON.parse(data.json)}catch(e){return}
+      var ru=+data.updatedAt||0;
+      if(ru>S.updatedAt){S=normalize(r);S.updatedAt=ru;saveLocal();renderAll();setSync('ok')}
+      else if(S.updatedAt>ru){if(remoteReady)scheduleRemote()}
+      else setSync('ok');
+    },function(){docRef=null;setSync('local')});
+  }catch(e){setSync('local')}
+}
+
+/* ---------- accessors ---------- */
+function st(k){return S.days[k]||{}}
+function mut(k){return S.days[k]||(S.days[k]={})}
+function topicOf(d){return d.buf?(st(d.key).topic||''):d.topic}
+function focusOf(d){return d.buf?(st(d.key).focus||''):d.focus}
+function has(d){return !!String(topicOf(d)).trim()}
+function moved(d){return !!st(d.key).movedTo}
+function isDone(d){return !!st(d.key).done}
+function setDone(k,v){var d=mut(k);d.done=!!v;d.b=[v?1:0,v?1:0,v?1:0,v?1:0]}
+function setBlock(k,i,v){var d=mut(k);d.b=d.b||[0,0,0,0];d.b[i]=v?1:0;d.done=d.b.every(Boolean)}
+function blocksDone(k){var b=st(k).b||[];var n=0;for(var i=0;i<4;i++)if(b[i])n++;return n}
+
+/* ---------- derived numbers ---------- */
+var T0=todayDate(),TKEY=keyOf(T0);
+function planned(){return DAYS.filter(function(d){return has(d)&&!moved(d)})}
+function stats(){var it=planned(),dn=it.filter(isDone).length;return {total:it.length,done:dn,pct:it.length?Math.round(dn/it.length*100):0}}
+function streak(){
+  var i=dayDiff(T0,START); if(i<0)return 0; if(i>LAST)i=LAST;
+  if(!isDone(DAYS[i])||!has(DAYS[i]))i--;
+  var n=0;
+  for(;i>=0;i--){var d=DAYS[i];if(!has(d)||moved(d))continue;if(isDone(d))n++;else break;}
+  return n;
+}
+function weekStats(w){var ds=DAYS.filter(function(d){return d.w===w});var it=ds.filter(function(d){return has(d)&&!moved(d)});var dn=it.filter(isDone).length;return {total:it.length,done:dn,p:it.length?dn/it.length:0,ds:ds}}
+function coverage(){
+  var r={F:[0,0],L:[0,0],M:[0,0]};
+  DAYS.forEach(function(d){
+    if(!d.exams.length)return;var s=st(d.key);
+    var dn=s.movedTo?!!(S.days[s.movedTo]&&S.days[s.movedTo].done):!!s.done;
+    d.exams.forEach(function(x){r[x][1]++;if(dn)r[x][0]++});
+  });
+  return r;
+}
+function missedList(){return DAYS.filter(function(d){return d.date<T0&&has(d)&&!moved(d)&&!isDone(d)&&!d.sun})}
+function poolList(){
+  var out=[];
+  DAYS.forEach(function(d){
+    var s=st(d.key);if(!has(d)||s.movedTo||d.sun)return;
+    if(d.date<T0&&!s.done)out.push({t:'miss',key:d.key});
+    else if(s.weak&&!s.weakPlaced)out.push({t:'weak',key:d.key});
+  });
+  (S.pool||[]).forEach(function(p){out.push({t:'man',id:p.id,text:p.text})});
+  return out;
+}
+function freeSlot(afterDate){
+  for(var i=0;i<DAYS.length;i++){var d=DAYS[i];if(d.buf&&!has(d)&&d.date>=T0&&d.date>afterDate)return d}
+  return null;
+}
+
+/* ---------- actions that change the plan ---------- */
+function toast(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(function(){t.classList.remove('on')},3200)}
+function placeItem(it){
+  if(it.t==='man'){
+    var s0=freeSlot(new Date(0));if(!s0)return false;
+    var o=mut(s0.key);o.topic=it.text;o.focus='Revision';o.done=false;o.b=[0,0,0,0];
+    S.pool=S.pool.filter(function(p){return p.id!==it.id});return s0;
+  }
+  var src=BYKEY[it.key],slot=freeSlot(src.date);if(!slot)return false;
+  var s=mut(slot.key);s.done=false;s.b=[0,0,0,0];s.from=it.key;
+  if(it.t==='miss'){s.topic=topicOf(src);s.focus='Backlog';mut(it.key).movedTo=slot.key}
+  else{s.topic='Revise: '+topicOf(src);s.focus='Weak areas';mut(it.key).weakPlaced=slot.key}
+  return slot;
+}
+function placeOne(it){
+  var slot=placeItem(it);
+  if(!slot){toast('No free buffer day left. Clear a slot or add more space by finishing earlier items.');return}
+  touch();renderAll();toast('Placed on '+fmtL(slot.date));
+}
+function undoMove(k){
+  var o=mut(k),slot=o.movedTo,s=slot&&S.days[slot];
+  if(s&&s.from===k&&!s.done){delete S.days[slot]}
+  else if(s&&s.from===k){s.from=null}
+  delete o.movedTo;touch();renderAll();
+}
+function clearSlot(k){
+  var s=S.days[k];if(!s)return;
+  if(s.from&&S.days[s.from]){var o=S.days[s.from];if(o.movedTo===k)delete o.movedTo;if(o.weakPlaced===k)delete o.weakPlaced}
+  delete S.days[k];touch();renderAll();
+}
+function addPoolText(t){t=String(t||'').trim();if(!t)return;S.pool.push({id:'p'+Date.now()+Math.floor(Math.random()*1000),text:t});touch();renderAll()}
+
+/* ---------- ui state ---------- */
+var VIEWS=['today','plan','buffer','mocks','syllabus'];
+var VIEW='today',FILTER='all',OPEN={},OPENW={},resetAsk=false;
+(function(){var h=(location.hash||'').replace('#','');if(VIEWS.indexOf(h)>=0)VIEW=h;
+  var i=Math.min(LAST,Math.max(0,dayDiff(T0,START)));OPENW[DAYS[i].w.n]=true;})();
+
+/* ---------- small html helpers ---------- */
+function chip(d){var f=focusOf(d);if(d.buf||!f)return '';return '<span class="chip c-'+d.cat+'">'+esc(f)+'</span>'}
+function focusOpts(sel){return '<option value="">Focus…</option>'+BUFFOCUS.map(function(f){return '<option'+(f===sel?' selected':'')+'>'+f+'</option>'}).join('')}
+function dots(k){var n=blocksDone(k),h='';for(var i=0;i<4;i++)h+='<i'+(i<n?' class="on"':'')+'></i>';return '<span class="dots" title="'+n+' of 4 sessions done" aria-label="'+n+' of 4 sessions done">'+h+'</span>'}
+function blocksHTML(d){
+  var b=st(d.key).b||[];
+  return '<div class="blocks">'+BLOCKS.map(function(x,i){
+    var on=!!b[i];
+    return '<label class="blk'+(on?' on':'')+'"><span class="chk"><input type="checkbox" data-act="blk" data-key="'+d.key+'" data-i="'+i+'" data-fid="b-'+d.key+'-'+i+'"'+(on?' checked':'')+(has(d)?'':' disabled')+'></span><span class="bt">'+x.t+'</span><span class="bn"><b>'+x.n+'</b><em>'+x.h+'</em></span></label>';
+  }).join('')+'</div>';
+}
+function noteHTML(d){
+  return '<textarea id="n-'+d.key+'" data-act="note" data-key="'+d.key+'" placeholder="'+(d.sun?'What will you revise this Sunday?':'Notes: what to revisit, doubts, PYQ scores…')+'" aria-label="Notes for '+fmt(d.date)+'">'+esc(st(d.key).note||'')+'</textarea>';
+}
+function actsHTML(d){
+  var s=st(d.key),h='<div class="acts">';
+  if(has(d))h+='<button class="btn sm starbtn" data-act="flag" data-key="'+d.key+'" data-fid="f-'+d.key+'" aria-pressed="'+(!!s.weak)+'">'+(s.weak?'Flagged for revision':'Flag for revision')+'</button>';
+  if(has(d)&&!d.sun&&!s.movedTo&&!s.done)h+='<button class="btn sm" data-act="move" data-key="'+d.key+'">Move to next free buffer day</button>';
+  if(s.movedTo)h+='<button class="btn sm" data-act="undo" data-key="'+d.key+'">Undo move</button>';
+  if(d.buf&&has(d))h+='<button class="btn sm danger" data-act="clear" data-key="'+d.key+'">Clear this day</button>';
+  return h+'</div>';
+}
+
+/* ---------- row (plan + buffer) ---------- */
+function row(d){
+  var s=st(d.key),done=!!s.done,mv=s.movedTo,top=topicOf(d),open=!!OPEN[d.key];
+  var missed=d.date<T0&&!done&&!mv&&has(d)&&!d.sun;
+  var cls='row'+(done?' done':'')+(d.key===TKEY?' today':'')+(missed?' missed':'')+(mv?' moved':'')+(d.sun?' sun':'');
+  var what;
+  if(d.buf)what='<input class="topic" type="text" id="t-'+d.key+'" data-act="topic" data-key="'+d.key+'" value="'+esc(top)+'" placeholder="Plan this day: topic, PYQ set, mock test…" list="presets" aria-label="Plan for '+fmtL(d.date)+'">';
+  else what='<div class="topic-t">'+esc(top)+'</div>';
+  var meta='<div class="meta">'+chip(d);
+  if(d.buf)meta+='<select data-act="focus" data-key="'+d.key+'" aria-label="Focus for '+fmt(d.date)+'">'+focusOpts(s.focus||'')+'</select>';
+  if(has(d))meta+=dots(d.key);
+  if(s.weak)meta+='<span class="chip eo">Flagged</span>';
+  if(missed)meta+='<span class="chip warn">Missed</span>';
+  if(mv&&BYKEY[mv])meta+='<span>Moved to '+fmtL(BYKEY[mv].date)+'</span>';
+  if(s.from&&BYKEY[s.from])meta+='<span>From '+fmt(BYKEY[s.from].date)+'</span>';
+  meta+='</div>';
+  var h='<div class="'+cls+'" id="r-'+d.key+'"><label class="chk"><input type="checkbox" data-act="done" data-key="'+d.key+'" data-fid="c-'+d.key+'" aria-label="Mark '+fmtL(d.date)+' done"'+(done?' checked':'')+((has(d)&&!mv)?'':' disabled')+'></label>'
+    +'<div class="when"><b>'+DOW[d.date.getDay()]+'</b><span>'+fmt(d.date)+'</span></div>'
+    +'<div style="min-width:0">'+what+meta+'</div>'
+    +'<button class="more" data-act="exp" data-key="'+d.key+'" data-fid="e-'+d.key+'" aria-expanded="'+open+'" aria-label="Details for '+fmtL(d.date)+'"><span class="chev"></span></button></div>';
+  if(open)h+='<div class="detail">'+blocksHTML(d)+noteHTML(d)+actsHTML(d)+'</div>';
+  return h;
+}
+
+/* ---------- views ---------- */
+function stripHTML(){
+  var cur=Math.min(LAST,Math.max(0,dayDiff(T0,START))),h='<div class="strip">';
+  WEEKS.forEach(function(w){
+    var ws=weekStats(w),isNow=DAYS[cur].w===w&&dayDiff(T0,START)>=0&&dayDiff(T0,START)<=LAST;
+    h+='<button class="cell'+(w.kind==='buffer'?' buf':'')+(isNow?' now':'')+'" data-act="wkgo" data-n="'+w.n+'" title="Week '+w.n+': '+esc(w.label+' · '+w.title)+' · '+ws.done+'/'+ws.total+' done" aria-label="Week '+w.n+', '+esc(w.title)+', '+ws.done+' of '+ws.total+' done"><i style="height:'+Math.round(ws.p*100)+'%"></i><span>'+w.n+'</span></button>';
+  });
+  return h+'</div><div class="legend"><span>Cell fill = share of the week done</span><span>Dashed = buffer week</span><span>Pink outline = this week</span></div>';
+}
+function readyHTML(){
+  var c=coverage(),h='<div class="ready">';
+  ['F','L','M'].forEach(function(k){
+    var n=c[k][0],t=c[k][1],p=t?Math.round(n/t*100):0;
+    h+='<span class="code">'+EXAMS[k].code+'</span><div><div class="nm">'+EXAMS[k].name+'</div><div class="bar thin"><i style="width:'+p+'%"></i></div></div><span class="v">'+p+'% · '+n+'/'+t+'</span>';
+  });
+  return h+'</div><p class="small muted" style="margin:12px 0 0">Counts core topic days that apply to each exam. A topic moved to a buffer day counts when you finish it there.</p>';
+}
+function vToday(){
+  var di=dayDiff(T0,START),before=di<0,after=di>LAST,d=DAYS[Math.min(LAST,Math.max(0,di))];
+  var lead;
+  if(before)lead='Starts '+fmtL(START)+', in '+(-di)+' day'+(-di===1?'':'s')+'. First up:';
+  else if(after)lead='The 18 weeks are over. Last day of the plan:';
+  else lead='Day '+(di+1)+' of '+(LAST+1)+' · Week '+d.w.n+' · '+fmtL(d.date);
+  var head,tc='today-card card';
+  if(d.buf)head='<div class="plan-in"><input class="topic" type="text" id="t-'+d.key+'" data-act="topic" data-key="'+d.key+'" value="'+esc(topicOf(d))+'" placeholder="Open buffer day. Plan it: topic, PYQ set, mock test…" list="presets" aria-label="Plan for today"><select data-act="focus" data-key="'+d.key+'" aria-label="Focus">'+focusOpts(st(d.key).focus||'')+'</select></div>';
+  else head='<h2>'+esc(topicOf(d))+'</h2><div>'+chip(d)+'</div>';
+  var h='<div class="grid2"><div class="stack"><section class="'+tc+'"><div class="eyebrow">'+esc(lead)+'</div>'+head+blocksHTML(d)+noteHTML(d)+'<div class="acts"><button class="btn pri" data-act="done2" data-key="'+d.key+'"'+(has(d)?'':' disabled')+'>'+(isDone(d)?'Mark not done':'Mark whole day done')+'</button></div>'+actsHTML(d)+'</section>';
+  // up next
+  var nx=[];for(var i=d.idx+1;i<=LAST&&nx.length<4;i++)nx.push(DAYS[i]);
+  h+='<section class="card"><div class="sec-h"><h2>Up next</h2></div>'+(nx.length?'<ul class="mini">'+nx.map(function(x){return '<li><span class="d">'+fmtL(x.date)+'</span><span class="tx">'+(has(x)?esc(topicOf(x)):'<span class="muted">Open buffer day, not planned yet</span>')+'</span><span class="mb">'+chip(x)+'</span></li>'}).join('')+'</ul>':'<p class="empty">Nothing after this.</p>')+'</section></div>';
+  // right column
+  var ms=missedList();
+  h+='<div class="stack"><section class="card"><div class="sec-h"><h2>Readiness by exam</h2></div>'+readyHTML()+'</section>';
+  h+='<section class="card"><div class="sec-h"><h2>Missed topics</h2><span class="small muted">'+ms.length+'</span></div>';
+  if(!ms.length)h+='<p class="empty">Nothing missed. Anything you skip will show up here with a one-tap move to a buffer day.</p>';
+  else h+='<ul class="mini">'+ms.slice(0,5).map(function(x){return '<li><span class="d">'+fmt(x.date)+'</span><span class="tx">'+esc(topicOf(x))+'</span><span class="mb"><button class="btn sm" data-act="doneNow" data-key="'+x.key+'">Done</button><button class="btn sm" data-act="move" data-key="'+x.key+'">Move</button></span></li>'}).join('')+'</ul>'+(ms.length>5?'<p class="small muted" style="margin:10px 0 0">+ '+(ms.length-5)+' more in the Buffer weeks tab.</p>':'');
+  h+='</section></div></div>';
+  h+='<section class="card" style="margin-top:16px"><div class="sec-h"><h2>18 weeks</h2><span class="small muted">Tap a week to open it</span></div>'+stripHTML()+'</section>';
+  return h;
+}
+function passFilter(d){
+  if(FILTER==='todo')return has(d)&&!isDone(d)&&!moved(d);
+  if(FILTER==='done')return isDone(d);
+  if(FILTER==='flag')return !!st(d.key).weak;
+  return true;
+}
+function weekCard(w,forceOpen){
+  var ws=weekStats(w),open=forceOpen||!!OPENW[w.n],ds=ws.ds,vis=ds.filter(passFilter);
+  var h='<section class="week'+(open?' open':'')+'" id="wk-'+w.n+'"><button class="wk-h" data-act="wk" data-n="'+w.n+'" data-fid="w-'+w.n+'" aria-expanded="'+open+'"><span class="t"><b>Week '+w.n+' · '+esc(w.label)+'</b><span>'+esc(w.title)+' · '+fmt(ds[0].date)+' to '+fmt(ds[6].date)+'</span></span><span class="bw"><div class="bar thin"><i style="width:'+Math.round(ws.p*100)+'%"></i></div></span><span class="p">'+ws.done+'/'+ws.total+' <span class="chev"></span></span></button>';
+  if(open)h+='<div class="wk-b">'+(vis.length?vis.map(row).join(''):'<p class="empty" style="padding:12px 16px;margin:0">Nothing matches this filter.</p>')+'</div>';
+  return h+'</section>';
+}
+function vPlan(){
+  var h='<div class="toolbar"><div class="seg" role="group" aria-label="Filter">';
+  [['all','All'],['todo','To do'],['done','Done'],['flag','Flagged']].forEach(function(f){h+='<button data-act="flt" data-v="'+f[0]+'" aria-pressed="'+(FILTER===f[0])+'">'+f[1]+'</button>'});
+  h+='</div><div class="seg"><button data-act="gototoday">Go to today</button><button data-act="wkall" data-v="1">Expand all</button><button data-act="wkall" data-v="0">Collapse all</button></div></div>';
+  return h+WEEKS.map(function(w){return weekCard(w,false)}).join('');
+}
+function poolItemHTML(it){
+  var tag,txt,btn='<button class="btn sm" data-act="pplace" data-i="'+it.k+'">Place</button>';
+  if(it.t==='miss'){var d=BYKEY[it.key];tag='<span class="chip warn">Missed</span>';txt=fmt(d.date)+' · '+esc(topicOf(d))}
+  else if(it.t==='weak'){var d2=BYKEY[it.key];tag='<span class="chip eo">Flagged</span>';txt='Revise: '+esc(topicOf(d2))}
+  else{tag='<span class="chip c-rev">Added</span>';txt=esc(it.text);btn+=' <button class="btn sm danger" data-act="pdel" data-id="'+it.id+'" aria-label="Remove">Remove</button>'}
+  return '<li>'+tag+'<span style="min-width:0;overflow-wrap:anywhere">'+txt+'</span><span>'+btn+'</span></li>';
+}
+var POOLCACHE=[];
+function vBuffer(){
+  var slots=DAYS.filter(function(d){return d.buf}),filled=slots.filter(has).length;
+  POOLCACHE=poolList().map(function(x,i){x.k=i;return x});
+  var free=slots.filter(function(d){return !has(d)&&d.date>=T0}).length;
+  var h='<section class="card"><div class="sec-h"><h2>Waiting for a slot</h2><span class="small muted">'+filled+' of '+slots.length+' buffer days planned · '+free+' free</span></div>';
+  h+='<p class="muted small" style="margin:0 0 10px">Missed topics and days you flagged for revision land here. Place them one by one, or fill every free buffer day at once.</p>';
+  h+=POOLCACHE.length?'<ul class="pool">'+POOLCACHE.map(poolItemHTML).join('')+'</ul>':'<p class="empty">Nothing waiting. Add your own items below, such as a mock to retake or a chapter you want to revisit.</p>';
+  h+='<div class="addrow"><input type="text" id="pool-in" data-act="poolin" placeholder="Add a topic or task to the pool" list="presets" aria-label="Add to pool"><button class="btn" data-act="padd">Add</button><button class="btn pri" data-act="autofill"'+(POOLCACHE.length?'':' disabled')+'>Fill free days from the pool</button></div>';
+  h+='<div class="chips" aria-label="Quick add">'+['Full mock test and analysis','PYQ drill: Tier 1 topics','PYQ drill: Forensic Science','PYQ drill: Life Sciences','PYQ drill: MLT','Weak-area revision','Formula and fact sheet pass'].map(function(p){return '<button data-act="ppre" data-v="'+esc(p)+'">+ '+esc(p)+'</button>'}).join('')+'</div></section>';
+  h+='<div style="margin-top:16px">'+WEEKS.filter(function(w){return w.kind==='buffer'}).map(function(w){return weekCard(w,true)}).join('')+'</div>';
+  return h;
+}
+function mockEntries(){
+  var e=[];
+  DAYS.forEach(function(d){if(d.cat==='mock'||(d.buf&&has(d)&&st(d.key).focus==='Mock test'))e.push({id:d.key,date:d.date,label:topicOf(d),extra:false})});
+  (S.extraMocks||[]).forEach(function(m){e.push({id:m.id,date:parseKey(m.date),label:m.label||'Extra mock',extra:true,dkey:m.date})});
+  return e.sort(function(a,b){return a.date-b.date});
+}
+function mpct(id){
+  var r=S.mocks[id];if(!r||r.score===undefined||r.score===null||r.score==='')return null;
+  var sc=parseFloat(r.score);if(isNaN(sc))return null;
+  var tot=parseFloat(r.total);if(!(tot>0))tot=S.mockTotal||300;
+  return sc/tot*100;
+}
+function mockSummary(){
+  var es=mockEntries(),logged=es.filter(function(e){return mpct(e.id)!==null}),ps=logged.map(function(e){return mpct(e.id)});
+  var avg=ps.length?Math.round(ps.reduce(function(a,b){return a+b},0)/ps.length):null,best=ps.length?Math.round(Math.max.apply(null,ps)):null;
+  var lastv=ps.length?Math.round(ps[ps.length-1]):null,delta=ps.length>1?Math.round(ps[ps.length-1]-ps[ps.length-2]):null;
+  function one(v,l){return '<div><b>'+v+'</b><span>'+l+'</span></div>'}
+  return '<div class="sum">'+one(logged.length+' / '+es.length,'mocks logged')+one(avg===null?'–':avg+'%','average')+one(best===null?'–':best+'%','best')+one(lastv===null?'–':lastv+'%','latest'+(delta===null?'':' ('+(delta>=0?'+':'')+delta+' vs previous)'))+'</div>';
+}
+function mockChart(){
+  var pts=mockEntries().filter(function(e){return mpct(e.id)!==null});
+  if(!pts.length)return '<p class="empty">Log a score and your trend appears here.</p>';
+  var W=640,H=230,L=40,R=16,T=18,B=34,n=pts.length,iw=W-L-R,ih=H-T-B;
+  function X(i){return n===1?L+iw/2:L+iw*i/(n-1)}
+  function Y(p){return T+ih*(1-Math.max(0,Math.min(100,p))/100)}
+  var s='<svg class="chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Mock test score trend">';
+  [0,25,50,75,100].forEach(function(g){s+='<line class="g" x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(g)+'" y2="'+Y(g)+'"/><text x="'+(L-8)+'" y="'+(Y(g)+4)+'" text-anchor="end">'+g+'%</text>'});
+  var path=pts.map(function(e,i){return (i?'L':'M')+X(i).toFixed(1)+' '+Y(mpct(e.id)).toFixed(1)}).join(' ');
+  if(n>1)s+='<path class="ln" d="'+path+'"/>';
+  pts.forEach(function(e,i){
+    var p=mpct(e.id),x=X(i),y=Y(p);
+    s+='<circle class="pt" cx="'+x.toFixed(1)+'" cy="'+y.toFixed(1)+'" r="5"/><text class="pv" x="'+x.toFixed(1)+'" y="'+(y-11<T-2?y+20:y-11).toFixed(1)+'" text-anchor="middle">'+Math.round(p)+'%</text><text x="'+x.toFixed(1)+'" y="'+(H-10)+'" text-anchor="middle">'+fmt(e.date)+'</text>';
+  });
+  return s+'</svg>';
+}
+function vMocks(){
+  var es=mockEntries();
+  var h='<section class="card"><div class="sec-h"><h2>Score trend</h2><label class="small muted">Default out of <input type="number" id="mtot" data-act="mtot" value="'+(S.mockTotal||300)+'" min="1" style="width:84px;margin-left:6px" aria-label="Default total marks"></label></div><div id="msum">'+mockSummary()+'</div><div id="mchart">'+mockChart()+'</div></section>';
+  h+='<section class="card" style="margin-top:16px"><div class="sec-h"><h2>Mock log</h2><span class="small muted">The 8 plan mocks, plus any buffer day set to Mock test</span></div><div class="mhead"><span>Date</span><span>Test</span><span>Score</span><span>Out of</span><span>Minutes</span><span>%</span></div>';
+  h+=es.map(function(e){
+    var r=S.mocks[e.id]||{},p=mpct(e.id),status=p!==null?'':(e.date<=T0?'Due':'Upcoming');
+    return '<div class="mrow" id="m-'+e.id+'"><span class="d mono small">'+fmt(e.date)+'</span><span class="lb">'+esc(e.label)+(status?'<small>'+status+'</small>':'')+'</span>'
+      +'<input type="number" step="any" data-act="m" data-id="'+e.id+'" data-f="score" value="'+esc(r.score===undefined?'':r.score)+'" placeholder="Score" aria-label="Score">'
+      +'<input type="number" step="any" data-act="m" data-id="'+e.id+'" data-f="total" value="'+esc(r.total===undefined?'':r.total)+'" placeholder="'+(S.mockTotal||300)+'" aria-label="Out of">'
+      +'<input type="number" step="any" data-act="m" data-id="'+e.id+'" data-f="mins" value="'+esc(r.mins===undefined?'':r.mins)+'" placeholder="Min" aria-label="Minutes taken">'
+      +'<span class="pct pc">'+(p===null?'–':Math.round(p)+'%')+'</span>'
+      +'<input class="nt" type="text" data-act="m" data-id="'+e.id+'" data-f="note" value="'+esc(r.note||'')+'" placeholder="Weak topics found, silly mistakes, what to fix" aria-label="Notes">'
+      +(e.extra?'<button class="btn sm danger" style="grid-column:1/-1;justify-self:start" data-act="mdel" data-id="'+e.id+'">Remove this mock</button>':'')+'</div>';
+  }).join('');
+  h+='<div class="addrow"><input type="date" id="xm-date" value="'+keyOf(T0)+'" aria-label="Date" style="flex:0 1 160px"><input type="text" id="xm-label" placeholder="Extra mock name, for example Previous-year paper 2024" aria-label="Mock name"><button class="btn" data-act="mAdd">Add mock</button></div></section>';
+  return h;
+}
+function vSyllabus(){
+  var h='<div class="tiers">'
+  +'<section class="card"><span class="chip c-t1">Tier 1</span><h2 style="margin-top:8px">Universal</h2><div class="ex"><span class="chip c-all">SCQP13</span><span class="chip c-all">SCQP17</span><span class="chip c-all">SCQP20</span></div><ul><li>Techniques and instrumentation: chromatography, spectroscopy, microscopy, electrophoresis, PCR</li><li>Biochemistry: proteins, DNA, carbohydrates, lipids</li><li>Molecular biology and genetics</li><li>Microbiology and immunology</li><li>Human anatomy and physiology</li><li>Biotechnology: recombinant DNA</li></ul></section>'
+  +'<section class="card"><span class="chip c-t2">Tier 2</span><h2 style="margin-top:8px">Partial overlap</h2><div class="ex"><span class="chip c-all">Two exams each</span></div><ul><li>Hematology and blood analysis (Forensic, MLT)</li><li>Toxicology and drugs (Forensic, Life Sciences)</li><li>Histopathology (MLT) and autopsy (Forensic)</li><li>Plant sciences (Life Sciences, forensic botany)</li></ul></section>'
+  +'<section class="card"><span class="chip c-tF">Tier 3</span><h2 style="margin-top:8px">Unique to one exam</h2><ul><li><b>Forensic (SCQP13):</b> crime scene, police science, fingerprints, documents, IPC and CrPC, firearms, trace evidence, general chemistry and basic physics</li><li><b>Life Sciences (SCQP17):</b> detailed plant physiology (photosynthesis and more), animal invertebrates</li><li><b>MLT (SCQP20):</b> biostatistics, specific clinical pathology</li></ul></section></div>';
+  var cur=['Core'];
+  h+='<section class="card" style="margin-top:16px"><div class="sec-h"><h2>Progress by unit</h2></div>';
+  WEEKS.filter(function(w){return w.kind!=='buffer'}).forEach(function(w){var ws=weekStats(w);h+='<div class="unit"><span style="min-width:0"><b>'+esc(w.label)+'</b> <span class="muted">'+esc(w.title)+'</span></span><div class="bar thin"><i style="width:'+Math.round(ws.p*100)+'%"></i></div><span class="v">'+ws.done+'/'+ws.total+'</span></div>'});
+  h+='</section>';
+  var fl=DAYS.filter(function(d){return st(d.key).weak});
+  h+='<section class="card" style="margin-top:16px"><div class="sec-h"><h2>Flagged for revision</h2><span class="small muted">'+fl.length+'</span></div>'+(fl.length?'<ul class="mini">'+fl.map(function(d){return '<li><span class="d">'+fmt(d.date)+'</span><span class="tx">'+esc(topicOf(d))+'</span><span class="mb">'+chip(d)+'</span></li>'}).join('')+'</ul>':'<p class="empty">Open any day in the Full plan and tap Flag for revision. Flagged topics can be placed into buffer days.</p>')+'</section>';
+  return h;
+}
+
+/* ---------- render ---------- */
+function renderHead(){
+  var s=stats(),di=dayDiff(T0,START);
+  document.getElementById('k-pct').textContent=s.pct+'%';
+  document.getElementById('k-bar').style.width=s.pct+'%';
+  document.getElementById('k-sub').textContent=s.done+' of '+s.total+' planned study days done';
+  document.getElementById('k-streak').textContent=streak();
+  var el=document.getElementById('k-left'),lb=document.getElementById('k-leftlbl');
+  if(di<0){el.textContent=-di;lb.textContent='days until start'}
+  else{el.textContent=Math.max(0,LAST-di);lb.textContent='days left in plan'}
+}
+function renderTabs(){[].forEach.call(document.querySelectorAll('#tabs button'),function(b){if(b.dataset.v===VIEW)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')})}
+function renderFoot(){
+  var f=document.getElementById('foot-acts'),n=document.getElementById('foot-note');
+  if(resetAsk){n.textContent='This clears every checkbox, note, buffer plan and mock score. Export a backup first if unsure.';
+    f.innerHTML='<button class="btn sm danger" data-act="resetYes">Yes, reset everything</button><button class="btn sm" data-act="resetNo">Cancel</button>';}
+  else{n.textContent=docRef?'Progress saves automatically and follows you across devices.':'Progress saves in this browser. Export a backup to move it elsewhere.';
+    f.innerHTML='<button class="btn sm" data-act="export">Export backup</button><button class="btn sm" data-act="import">Import backup</button><input class="hidden-file" type="file" id="imp" accept="application/json,.json" tabindex="-1" aria-label="Import backup file"><button class="btn sm danger" data-act="resetAsk">Reset progress</button>';}
+}
+function renderView(){
+  var ae=document.activeElement,fid=ae&&ae.dataset?ae.dataset.fid:null;
+  var v=document.getElementById('view');
+  v.innerHTML=VIEW==='today'?vToday():VIEW==='plan'?vPlan():VIEW==='buffer'?vBuffer():VIEW==='mocks'?vMocks():vSyllabus();
+  if(fid){var n=v.querySelector('[data-fid="'+fid+'"]');if(n)n.focus({preventScroll:true})}
+}
+function renderAll(){T0=todayDate();TKEY=keyOf(T0);renderTabs();renderHead();renderView();renderFoot();setSync(syncMode)}
+function setView(v){
+  VIEW=v;renderTabs();renderView();
+  var nav=document.getElementById('tabs');if(window.scrollY>nav.offsetTop)window.scrollTo(0,nav.offsetTop);
+}
+function liveMocks(){
+  var a=document.getElementById('msum'),b=document.getElementById('mchart');if(a)a.innerHTML=mockSummary();if(b)b.innerHTML=mockChart();
+  [].forEach.call(document.querySelectorAll('.mrow'),function(r){var id=r.id.slice(2),p=mpct(id),el=r.querySelector('.pc');if(el)el.textContent=p===null?'–':Math.round(p)+'%';
+    var sm=r.querySelector('.lb small');if(sm&&p!==null)sm.remove()});
+}
+
+/* ---------- events ---------- */
+var page=document.querySelector('.page');
+page.addEventListener('click',function(e){
+  var t=e.target.closest('[data-act]');if(!t||/^(INPUT|SELECT|TEXTAREA)$/.test(t.tagName))return;
+  var a=t.dataset.act,k=t.dataset.key;
+  if(a==='tab')setView(t.dataset.v);
+  else if(a==='exp'){if(OPEN[k])delete OPEN[k];else OPEN[k]=true;renderView()}
+  else if(a==='wk'){var n=+t.dataset.n;if(OPENW[n])delete OPENW[n];else OPENW[n]=true;renderView()}
+  else if(a==='wkall'){OPENW={};if(t.dataset.v==='1')WEEKS.forEach(function(w){OPENW[w.n]=true});renderView()}
+  else if(a==='wkgo'){OPENW[+t.dataset.n]=true;FILTER='all';setView('plan');var el=document.getElementById('wk-'+t.dataset.n);if(el)el.scrollIntoView({block:'start'})}
+  else if(a==='gototoday'){var di=Math.min(LAST,Math.max(0,dayDiff(T0,START)));OPENW[DAYS[di].w.n]=true;FILTER='all';renderView();var r=document.getElementById('r-'+DAYS[di].key)||document.getElementById('wk-'+DAYS[di].w.n);if(r)r.scrollIntoView({block:'center'})}
+  else if(a==='flt'){FILTER=t.dataset.v;renderView()}
+  else if(a==='flag'){var s=mut(k);s.weak=!s.weak;touch();renderAll()}
+  else if(a==='move'){var d=BYKEY[k];placeOne({t:'miss',key:k})}
+  else if(a==='undo')undoMove(k);
+  else if(a==='clear')clearSlot(k);
+  else if(a==='doneNow'){setDone(k,true);touch();renderAll()}
+  else if(a==='done2'){setDone(k,!isDone(BYKEY[k]));touch();renderAll()}
+  else if(a==='padd'){var i=document.getElementById('pool-in');addPoolText(i.value)}
+  else if(a==='ppre')addPoolText(t.dataset.v);
+  else if(a==='pplace'){var it=POOLCACHE[+t.dataset.i];if(it)placeOne(it)}
+  else if(a==='pdel'){S.pool=S.pool.filter(function(p){return p.id!==t.dataset.id});touch();renderAll()}
+  else if(a==='autofill'){
+    var c=0,list=POOLCACHE.slice();
+    for(var j=0;j<list.length;j++){if(placeItem(list[j]))c++;else break}
+    if(c){touch();renderAll();toast(c+' item'+(c===1?'':'s')+' placed')}else toast('No free buffer day left.');
+  }
+  else if(a==='mAdd'){
+    var dt=document.getElementById('xm-date').value||keyOf(T0),lb=document.getElementById('xm-label').value.trim();
+    S.extraMocks.push({id:'x'+Date.now(),date:dt,label:lb||'Extra mock'});touch();renderView();
+  }
+  else if(a==='mdel'){S.extraMocks=S.extraMocks.filter(function(m){return m.id!==t.dataset.id});delete S.mocks[t.dataset.id];touch();renderView()}
+  else if(a==='export')doExport();
+  else if(a==='import')document.getElementById('imp').click();
+  else if(a==='resetAsk'){resetAsk=true;renderFoot()}
+  else if(a==='resetNo'){resetAsk=false;renderFoot()}
+  else if(a==='resetYes'){S=blank();resetAsk=false;touch();OPEN={};renderAll();toast('Progress cleared')}
+});
+page.addEventListener('change',function(e){
+  var t=e.target,a=t.dataset?t.dataset.act:null,k=t.dataset?t.dataset.key:null;
+  if(a==='done'){setDone(k,t.checked);touch();renderAll()}
+  else if(a==='blk'){setBlock(k,+t.dataset.i,t.checked);touch();renderAll()}
+  else if(a==='focus'){mut(k).focus=t.value;touch();renderHead()}
+  else if(t.id==='imp'&&t.files&&t.files[0])importFile(t.files[0]);
+});
+page.addEventListener('input',function(e){
+  var t=e.target,a=t.dataset?t.dataset.act:null,k=t.dataset?t.dataset.key:null;
+  if(a==='topic'){
+    mut(k).topic=t.value;
+    var box=t.closest('.row')||t.closest('.today-card'),cb=box&&box.querySelector('input[data-act="done"]');
+    if(cb)cb.disabled=!t.value.trim();
+    var sb=box&&box.querySelectorAll('input[data-act="blk"]');if(sb)[].forEach.call(sb,function(x){x.disabled=!t.value.trim()});
+    var b2=box&&box.querySelector('[data-act="done2"]');if(b2)b2.disabled=!t.value.trim();
+    touchSoon();renderHead();
+  }
+  else if(a==='note'){mut(k).note=t.value;touchSoon()}
+  else if(a==='m'){var r=S.mocks[t.dataset.id]||(S.mocks[t.dataset.id]={});r[t.dataset.f]=t.value;touchSoon();liveMocks()}
+  else if(a==='mtot'){var v=parseFloat(t.value);if(v>0){S.mockTotal=v;touchSoon();liveMocks()}}
+});
+page.addEventListener('keydown',function(e){if(e.key==='Enter'&&e.target.id==='pool-in'){e.preventDefault();addPoolText(e.target.value)}});
+
+async function doExport(){
+  try{
+    var dl=window.claude&&window.claude.use?await window.claude.use('downloads'):null;
+    if(!dl){toast('Saving files is not available in this view.');return}
+    await dl.save({filename:'cuet-pg-progress-'+keyOf(todayDate())+'.json',data:JSON.stringify(S,null,2)});
+    toast('Backup saved');
+  }catch(err){if(!err||err.code!=='declined')toast('Could not save the backup.')}
+}
+function importFile(f){
+  var rd=new FileReader();
+  rd.onload=function(){
+    try{var o=JSON.parse(rd.result);if(!o||typeof o.days!=='object')throw 0;S=normalize(o);touch();renderAll();toast('Backup imported')}
+    catch(err){toast('That file is not a tracker backup.')}
+  };
+  rd.readAsText(f);
+}
+document.addEventListener('visibilitychange',function(){if(!document.hidden&&keyOf(todayDate())!==TKEY)renderAll()});
+
+renderAll();
+setSync('local');
+connect();
+})();
+</script>
+
+</body></html>
